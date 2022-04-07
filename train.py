@@ -7,7 +7,7 @@ import torch
 from torch import nn
 import torch.optim as optim
 import numpy as np
-from transformers import AutoTokenizer, BertModel
+from transformers import AutoTokenizer, BertModel, AlbertTokenizer
 from neural_net import BertClassifier
 from utils import mk_html
 import logging
@@ -16,6 +16,7 @@ import logging
 logger = logging.getLogger(__name__)
 # 日本語BERT用のtokenizer
 tokenizer = AutoTokenizer.from_pretrained('cl-tohoku/bert-base-japanese-whole-word-masking')
+# tokenizer = AlbertTokenizer.from_pretrained('laboro-ai/distilbert-base-japanese')
 
 
 def train(param, train_dataset, test_dataset):
@@ -63,8 +64,8 @@ def train(param, train_dataset, test_dataset):
                                                            sort=False)
 
     # モデルを作成
-    # model = BertModel.from_pretrained('cl-tohoku/bert-base-japanese-whole-word-masking')
-    # print(model)
+    model = BertModel.from_pretrained('cl-tohoku/bert-base-japanese-whole-word-masking')
+    print(model)
 
     # batch = next(iter(valid_iter))
     # logger.info(batch.Text[0].size())
@@ -124,7 +125,7 @@ def train(param, train_dataset, test_dataset):
                 all_loss += batch_loss.item()
             loss_list.append(all_loss)
 
-            # テスト
+            # 評価
             all_valid_loss = 0
             with torch.no_grad():
                 for valid_idx, valid_batch in enumerate(valid_iter):
@@ -186,9 +187,32 @@ def train(param, train_dataset, test_dataset):
             html_output = mk_html(i, batch, pred, attentions[-1], tokenizer, id2cat)
             f.write(html_output)
 
+    # テスト結果及び提出用ファイルの生成
+    test_data.to_csv('./data/test.tsv', sep='\t', index=False, header=None)
+    test_data = torchtext.data.TabularDataset(path='./data/test.tsv', format='tsv', fields=[('Text', text)])
+    test_iter = torchtext.data.Iterator(test_data, batch_size=batch_size, repeat=False, sort=False)
+
+    pred_list = []
+    with torch.no_grad():
+        for batch in test_iter:
+            text_tensor = batch.Text[0].to(device)
+            score, _ = classifier(text_tensor)
+            _, pred = torch.max(score, 1)
+
+            pred = pred.to('cpu').detach().numpy().copy()
+            pred_list = np.append(pred_list, pred)
+    # print(pred_list)
+
+    pred_df = test_dataset.drop('text', axis=1)
+    pred_df['isFake'] = pred_list
+    pred_df['isFake'] = pred_df['isFake'].astype(int)
+
+    # csv出力
+    pred_df.to_csv(f'{result_dir}pred.csv', index=False)
+
 
 def bert_tokenizer(text):
-    return tokenizer.encode(text, return_tensors='pt', max_length=512)[0]
+    return tokenizer.encode(text, return_tensors='pt', max_length=512)[0]  # max_length=512
 
 
 if __name__ == '__main__':

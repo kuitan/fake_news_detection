@@ -1,6 +1,6 @@
 from torch import nn
 import torch.nn.functional as F
-from transformers import BertModel
+from transformers import BertModel, DistilBertForSequenceClassification, DistilBertModel
 
 
 class BertClassifier(nn.Module):
@@ -10,6 +10,7 @@ class BertClassifier(nn.Module):
     def __init__(self):
         super(BertClassifier, self).__init__()
         self.bert = BertModel.from_pretrained('cl-tohoku/bert-base-japanese-whole-word-masking')
+        # self.bert = DistilBertModel.from_pretrained('laboro-ai/distilbert-base-japanese')
         # BERTの隠れ層の次元数: 768, カテゴリ数: 2(True or False)
         self.linear = nn.Linear(768, 2)
         # 重み初期化処理

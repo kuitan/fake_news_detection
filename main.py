@@ -23,7 +23,7 @@ def main():
         # 出力ディレクトリ
         'result_dir': result_dir,
         # 学習パラメータ
-        'epoch_num': 100
+        'epoch_num': 5
     })  # 追加パラメータ
 
     # データを取得
