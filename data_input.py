@@ -15,6 +15,9 @@ def get_data(param):
     train_df = pd.read_csv(train_file)
     test_df = pd.read_csv(test_file)
 
+    print(train_df)
+    print(test_df)
+
     return train_df, test_df
 
 
